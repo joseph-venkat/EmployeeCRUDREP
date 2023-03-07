@@ -1,0 +1,44 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+- task: NodeTool@0
+  inputs:
+    versionSpec: '12.x'
+  displayName: 'Install Node.js'
+
+- script: |
+    npm install
+    npm run build -- --prod
+  displayName: 'npm install and build'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.SourcesDirectory)/dist'
+    artifactName: 'angular-artifact'
+  
+- task: DotNetCoreInstaller@2
+  inputs:
+    version: '3.1.x'
+  displayName: 'Install .NET Core SDK'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'restore'
+    projects: '**/*.csproj'
+  displayName: 'dotnet restore'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'build'
+    projects: '**/*.csproj'
+    arguments: '--configuration Release'
+  displayName: 'dotnet build'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(Build.SourcesDirectory)/**/bin/Release/netcoreapp3.1'
+    artifactName: 'dotnet-artifact'
