@@ -2,43 +2,58 @@ trigger:
 - main
 
 pool:
-  vmImage: 'ubuntu-latest'
+  name: MySelfHostedAgentPool
+  demands: npm
+
+variables:
+  buildConfiguration: 'Release'
 
 steps:
 - task: NodeTool@0
   inputs:
-    versionSpec: '12.x'
+    versionSpec: '14.x'
   displayName: 'Install Node.js'
 
-- script: |
-    npm install
-    npm run build -- --prod
-  displayName: 'npm install and build'
-
-- task: PublishBuildArtifacts@1
+- task: Npm@1
   inputs:
-    pathtoPublish: '$(Build.SourcesDirectory)/dist'
-    artifactName: 'angular-artifact'
-  
-- task: DotNetCoreInstaller@2
-  inputs:
-    version: '3.1.x'
-  displayName: 'Install .NET Core SDK'
+    command: 'install'
+    workingDir: '$(System.DefaultWorkingDirectory)/angular-app'
+  displayName: 'Install Angular dependencies'
 
 - task: DotNetCoreCLI@2
   inputs:
     command: 'restore'
     projects: '**/*.csproj'
-  displayName: 'dotnet restore'
+  displayName: 'Restore .NET dependencies'
 
 - task: DotNetCoreCLI@2
   inputs:
     command: 'build'
     projects: '**/*.csproj'
-    arguments: '--configuration Release'
-  displayName: 'dotnet build'
+    arguments: '--configuration $(buildConfiguration)'
+  displayName: 'Build .NET application'
+
+- task: Npm@1
+  inputs:
+    command: 'install'
+    workingDir: '$(System.DefaultWorkingDirectory)/angular-app'
+  displayName: 'Install Angular dependencies'
+
+- task: Npm@1
+  inputs:
+    command: 'run'
+    workingDir: '$(System.DefaultWorkingDirectory)/angular-app'
+    arguments: 'build --prod'
+  displayName: 'Build Angular application'
 
 - task: PublishBuildArtifacts@1
   inputs:
-    pathtoPublish: '$(Build.SourcesDirectory)/**/bin/Release/netcoreapp3.1'
-    artifactName: 'dotnet-artifact'
+    pathtoPublish: '$(System.DefaultWorkingDirectory)/angular-app/dist'
+    artifactName: 'angular-app'
+  displayName: 'Publish Angular artifacts'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathtoPublish: '$(System.DefaultWorkingDirectory)/dotnet-app/bin/$(buildConfiguration)/net5.0'
+    artifactName: 'dotnet-app'
+  displayName: 'Publish .NET artifacts'
